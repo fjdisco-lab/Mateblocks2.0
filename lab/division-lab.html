@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laboratorio · División</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#141322;
+    --surface:#1c1b2e;
+    --surface2:#262539;
+    --line:#33324a;
+    --hdr-bg:#2e2d49;
+    --hdr-text:#e8e9f5;
+    --text:#fffffe;
+    --muted:#a7a9be;
+    --res:#06d6a0;
+    --num:#ffd166;
+    --rem:#ff6b6b;
+    --dev:#e08a3c;
+    --c1:#ff6b6b; --c2:#ffd166; --c3:#06d6a0; --c4:#118ab2; --c5:#c77dff;
+    --cell:38px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);
+    min-height:100vh;padding:12px clamp(8px,2.5vw,24px) 40px;
+  }
+  .wrap{max-width:900px;margin:0 auto;}
+
+  /* ── BANNER MODO DEV ── */
+  .devbanner{
+    display:none;align-items:center;justify-content:space-between;gap:10px;
+    background:var(--dev);color:#241503;border-radius:12px;
+    padding:10px 16px;margin-bottom:12px;font-weight:800;font-size:.9rem;
+    letter-spacing:.02em;
+  }
+  body.dev .devbanner{display:flex;}
+  .devbanner .counts{
+    font-family:'Fredoka',sans-serif;font-weight:600;font-size:.82rem;
+    display:flex;gap:14px;flex-wrap:wrap;
+  }
+  .devbanner .counts span{white-space:nowrap;}
+
+  /* ── ENTRADA ── */
+  .inputs{
+    display:flex;justify-content:center;align-items:center;gap:10px;
+    padding:2px 0 12px;flex-wrap:wrap;
+  }
+  .inputs input{
+    font-family:'Fredoka',sans-serif;font-weight:600;
+    font-size:clamp(1.5rem,6vw,2.1rem);
+    width:clamp(90px,24vw,130px);text-align:center;
+    color:var(--num);background:var(--surface);
+    border:1.5px solid var(--line);border-radius:12px;
+    padding:8px 4px;outline:none;
+  }
+  .inputs input:focus{border-color:var(--num);}
+  .inputs .sign{font-family:'Fredoka',sans-serif;font-size:1.6rem;color:var(--muted);}
+
+  /* ── ECUACIÓN ── */
+  .eq{
+    font-family:'Fredoka',sans-serif;font-weight:600;
+    font-size:clamp(1.7rem,6.5vw,2.6rem);
+    text-align:center;letter-spacing:1px;
+    padding:2px 0 14px;user-select:none;min-height:1.3em;
+  }
+  .eq .op{color:var(--muted);font-weight:500;}
+  .eq .res{color:var(--res);}
+  .eq .rem{color:var(--rem);font-size:.62em;}
+  .eq .placeholder{color:var(--muted);font-size:.5em;font-family:'Nunito',sans-serif;font-weight:700;letter-spacing:0;}
+
+  /* ── PESTAÑAS DE VISTA ── */
+  .views{display:flex;justify-content:center;gap:8px;padding-bottom:14px;flex-wrap:wrap;}
+  .view-btn{
+    font-family:'Fredoka',sans-serif;font-weight:500;font-size:.92rem;
+    color:var(--muted);background:var(--surface);border:1.5px solid var(--line);
+    border-radius:999px;padding:8px 16px;cursor:pointer;
+    transition:color .15s, border-color .15s, background .15s;
+  }
+  .view-btn.active{color:var(--text);border-color:var(--num);background:var(--surface2);}
+  .view-btn:focus-visible{outline:2px solid var(--c4);outline-offset:2px;}
+
+  .stage-card{
+    background:var(--surface);border:1.5px solid var(--line);
+    border-radius:14px;padding:16px;min-height:220px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+  }
+  .note{font-size:.9rem;color:var(--muted);text-align:center;max-width:44ch;line-height:1.5;}
+  .caption{margin-top:12px;font-size:.86rem;color:var(--muted);text-align:center;max-width:48ch;}
+  .caption b{color:var(--text);}
+  .caption .sobra{color:var(--rem);font-weight:800;}
+
+  /* ── REPARTIR ── */
+  .groups{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;align-items:flex-start;}
+  .group{
+    background:var(--surface2);border:1.5px solid var(--line);border-radius:12px;
+    padding:10px;display:grid;gap:6px;align-content:start;
+  }
+  .dot{width:16px;height:16px;border-radius:50%;background:var(--res);
+    box-shadow:inset 0 -2px 0 rgba(0,0,0,.25);animation:pop .16s ease-out backwards;}
+  .leftover{margin-top:4px;display:flex;gap:6px;align-items:center;}
+  .leftover .dot{background:var(--rem);}
+  @keyframes pop{from{transform:scale(.3);opacity:0;}to{transform:scale(1);opacity:1;}}
+  @media(prefers-reduced-motion:reduce){.dot{animation:none;}}
+
+  /* ── TABLA ── */
+  .tabla-scroll{overflow:auto;max-width:100%;max-height:56vh;border-radius:10px;overscroll-behavior:contain;}
+  .tabla{display:grid;gap:3px;width:max-content;}
+  .cell{
+    width:var(--cell);height:var(--cell);display:flex;align-items:center;justify-content:center;
+    border-radius:6px;font-weight:800;font-size:calc(var(--cell)*.3);
+    background:var(--surface2);color:var(--muted);font-family:'Nunito',sans-serif;
+  }
+  .cell.hdr{background:var(--hdr-bg);color:var(--hdr-text);font-family:'Fredoka',sans-serif;
+    font-weight:600;position:sticky;z-index:3;}
+  .cell.hdr.top{top:0;} .cell.hdr.left{left:0;} .cell.hdr.corner{top:0;left:0;z-index:4;}
+  .cell.hdr.lit{background:var(--num);color:#241503;}
+  .cell.rowlit{background:rgba(255,209,102,.18);color:var(--text);}
+  .cell.target{background:var(--res);color:#03251c;transform:scale(1.12);
+    box-shadow:0 0 0 2.5px #fff;position:relative;z-index:2;}
+  .cell.closest{background:var(--rem);color:#3a0d0d;
+    box-shadow:0 0 0 2.5px #fff;position:relative;z-index:2;}
+
+  /* ── DEV TOGGLE ── */
+  .devbtn{
+    position:fixed;right:12px;bottom:12px;z-index:20;
+    font-family:'Fredoka',sans-serif;font-size:.72rem;font-weight:500;
+    color:var(--muted);background:var(--surface);border:1.5px solid var(--line);
+    border-radius:999px;padding:6px 12px;cursor:pointer;opacity:.55;
+    transition:opacity .15s;
+  }
+  .devbtn:hover,.devbtn:focus-visible{opacity:1;outline:none;}
+  body.dev .devbtn{background:var(--dev);color:#241503;border-color:var(--dev);opacity:1;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="devbanner">
+    <span><i>●</i> MODO DESARROLLADOR · estos resultados no se cuentan</span>
+    <span class="counts" id="devcounts"></span>
+  </div>
+
+  <div class="inputs">
+    <input type="number" id="inD" inputmode="numeric" min="1" max="999" placeholder="?" aria-label="Número a dividir (dividendo)">
+    <span class="sign">÷</span>
+    <input type="number" id="ind" inputmode="numeric" min="1" max="99" placeholder="?" aria-label="Entre cuánto (divisor)">
+  </div>
+
+  <div class="eq" id="eq" aria-live="polite"></div>
+
+  <div class="views" role="tablist">
+    <button class="view-btn active" id="btn-repartir" role="tab" onclick="setView('repartir')">Repartir</button>
+    <button class="view-btn" id="btn-tabla" role="tab" onclick="setView('tabla')">En la tabla</button>
+    <button class="view-btn" id="btn-area" role="tab" onclick="setView('area')">Como área</button>
+  </div>
+
+  <div class="stage-card">
+    <div id="stage" style="width:100%;display:flex;flex-direction:column;align-items:center;"></div>
+  </div>
+
+</div>
+
+<button class="devbtn" id="devbtn" onclick="toggleDev()">modo desarrollador</button>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const COLORS = ['#ff6b6b','#ffd166','#06d6a0','#118ab2','#c77dff'];
+  function tint(hex, a){
+    const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+
+  /* ══════════ MOTOR ÚNICO ══════════ */
+  const state = { D:null, d:null, view:'repartir' };
+  function compute(){
+    if(state.D===null || state.d===null) return null;
+    return { q: Math.floor(state.D/state.d), r: state.D % state.d };
+  }
+
+  /* ══════════ CONTADOR + MODO DEV ══════════ */
+  const STORE_KEY = 'div_lab_counts_v1';
+  let counts = loadCounts();
+  let devMode = false;                 /* por sesión: arranca apagado */
+  let devCounts = { repartir:0, tabla:0, area:0 };
+  let lastCounted = '';                /* dedupe: view|D|d ya contado */
+
+  function loadCounts(){
+    try{ const raw = localStorage.getItem(STORE_KEY);
+      if(raw) return JSON.parse(raw); }catch(e){}
+    return { repartir:0, tabla:0, area:0 };
+  }
+  function saveCounts(){
+    try{ localStorage.setItem(STORE_KEY, JSON.stringify(counts)); }catch(e){}
+  }
+  function registerResult(){
+    const key = `${state.view}|${state.D}|${state.d}`;
+    if(key === lastCounted) return;    /* no recontar el mismo resultado */
+    lastCounted = key;
+    if(devMode){ devCounts[state.view]++; }
+    else { counts[state.view]++; saveCounts(); }
+    renderDevCounts();
+  }
+  function renderDevCounts(){
+    $('devcounts').innerHTML =
+      `<span>Juana · repartir ${counts.repartir} · tabla ${counts.tabla} · área ${counts.area}</span>` +
+      `<span>(sesión dev · r ${devCounts.repartir} · t ${devCounts.tabla} · a ${devCounts.area})</span>`;
+  }
+  function toggleDev(){
+    devMode = !devMode;
+    document.body.classList.toggle('dev', devMode);
+    $('devbtn').textContent = devMode ? 'volver a modo Juana' : 'modo desarrollador';
+    lastCounted = '';                  /* permite recontar tras cambiar de modo */
+    renderDevCounts();
+  }
+
+  /* ══════════ ECUACIÓN ══════════ */
+  function renderEq(){
+    const c = compute();
+    if(!c){ $('eq').innerHTML = `<span class="placeholder">Escribí una división</span>`; return; }
+    let html = `<span style="color:var(--num)">${state.D}</span> <span class="op">÷</span> ` +
+               `<span style="color:var(--num)">${state.d}</span> <span class="op">=</span> ` +
+               `<span class="res">${c.q}</span>`;
+    if(c.r>0) html += ` <span class="rem">y sobran ${c.r}</span>`;
+    $('eq').innerHTML = html;
+  }
+
+  /* ══════════ VISTA 1 · REPARTIR ══════════ */
+  function renderRepartir(){
+    const stage = $('stage'); stage.innerHTML='';
+    const c = compute();
+    if(!c){ stage.innerHTML = `<p class="note">Escribí una división para ver cómo se reparte.</p>`; return; }
+    if(state.d>10 || state.D>60){
+      stage.innerHTML = `<p class="note">Son muchos caramelos para dibujar de a uno.<br>Para números grandes, probá la vista <b>Como área</b>.</p>`;
+      return;
+    }
+    const wrap = document.createElement('div'); wrap.className='groups';
+    const cols = Math.min(c.q, 4) || 1;
+    for(let g=0; g<state.d; g++){
+      const grp = document.createElement('div');
+      grp.className='group';
+      grp.style.gridTemplateColumns = `repeat(${cols},16px)`;
+      for(let k=0;k<c.q;k++){
+        const dot=document.createElement('div'); dot.className='dot';
+        dot.style.animationDelay=((g*c.q+k)*0.015)+'s';
+        grp.appendChild(dot);
+      }
+      wrap.appendChild(grp);
+    }
+    stage.appendChild(wrap);
+
+    if(c.r>0){
+      const lo=document.createElement('div'); lo.className='leftover';
+      for(let k=0;k<c.r;k++){const d=document.createElement('div');d.className='dot';lo.appendChild(d);}
+      const lbl=document.createElement('span'); lbl.className='note';
+      lbl.style.color='var(--rem)'; lbl.style.fontWeight='800';
+      lbl.textContent = `sobran ${c.r}`;
+      lo.appendChild(lbl);
+      stage.appendChild(lo);
+    }
+    const cap=document.createElement('p'); cap.className='caption';
+    cap.innerHTML = `${state.D} repartido en <b>${state.d} grupos</b> → <b>${c.q}</b> en cada uno` +
+      (c.r>0?`, y <span class="sobra">sobran ${c.r}</span>`:``);
+    stage.appendChild(cap);
+  }
+
+  /* ══════════ VISTA 2 · TABLA AL REVÉS ══════════ */
+  function renderTabla(){
+    const stage=$('stage'); stage.innerHTML='';
+    const c=compute();
+    if(!c){ stage.innerHTML = `<p class="note">Escribí una división para buscarla en la tabla.</p>`; return; }
+    if(state.d>20 || c.q>20){
+      stage.innerHTML = `<p class="note">Esta división se sale de la tabla (llega hasta 20×20).<br>Para números grandes, probá la vista <b>Como área</b>.</p>`;
+      return;
+    }
+    const N=20, exact=(c.r===0);
+    const scroll=document.createElement('div'); scroll.className='tabla-scroll';
+    const grid=document.createElement('div'); grid.className='tabla';
+    grid.style.gridTemplateColumns=`repeat(${N+1}, var(--cell))`;
+    grid.appendChild(mkCell('÷','hdr corner'));
+    for(let j=1;j<=N;j++){
+      grid.appendChild(mkCell(j,'hdr top'+((j===c.q)?' lit':'')));
+    }
+    for(let i=1;i<=N;i++){
+      grid.appendChild(mkCell(i,'hdr left'+((i===state.d)?' lit':'')));
+      for(let j=1;j<=N;j++){
+        let cls='cell';
+        const val=i*j;
+        if(i===state.d){
+          cls+=' rowlit';
+          if(exact && val===state.D) cls='cell target';
+          if(!exact && val===c.q*state.d) cls='cell closest';
+        }
+        grid.appendChild(mkCell(val,cls));
+      }
+    }
+    scroll.appendChild(grid); stage.appendChild(scroll);
+
+    const cap=document.createElement('p'); cap.className='caption';
+    if(exact){
+      cap.innerHTML = `Fila del <b>${state.d}</b>: buscá el <b>${state.D}</b>. Cae en la columna <b>${c.q}</b>. Ese es el resultado.`;
+    }else{
+      cap.innerHTML = `Fila del <b>${state.d}</b>: el más cercano sin pasarse es <b>${c.q*state.d}</b> (columna <b>${c.q}</b>), ` +
+        `y <span class="sobra">sobran ${c.r}</span> para llegar a ${state.D}.`;
+    }
+    stage.appendChild(cap);
+  }
+  function mkCell(txt,cls){const d=document.createElement('div');d.className=cls;d.textContent=txt;return d;}
+
+  /* ══════════ VISTA 3 · ÁREA AL REVÉS ══════════ */
+  function stepFor(n){ if(n<=20) return 1; if(n<=200) return 10; return 100; }
+
+  function renderArea(){
+    const stage=$('stage'); stage.innerHTML='';
+    const c=compute();
+    if(!c){ stage.innerHTML = `<p class="note">Escribí una división para verla como un área.</p>`; return; }
+
+    const cols=c.q, rows=state.d, rem=c.r;
+    const totalCols = cols + (rem>0?1:0);
+    const svgNS='http://www.w3.org/2000/svg';
+
+    const ML=52, MB=42, PT=8, PR=8;
+    const availW=Math.min(stage.clientWidth||320,760);
+    const maxW=availW-ML-PR, maxH=300-MB-PT;
+    const scale=Math.min(maxW/Math.max(totalCols,1), maxH/Math.max(rows,1));
+    const wFull=cols*scale, hFull=rows*scale;
+    const stepX=stepFor(cols), stepY=stepFor(rows);
+    const colsSmall=(stepX===1 && cols<=20);
+
+    const X0=ML, Y0=PT;
+    const totW=ML+(totalCols*scale)+PR, totH=PT+hFull+MB;
+    const svg=document.createElementNS(svgNS,'svg');
+    svg.setAttribute('width',totW); svg.setAttribute('height',totH);
+    svg.setAttribute('viewBox',`0 0 ${totW} ${totH}`);
+
+    /* relleno del área exacta */
+    if(colsSmall){
+      for(let j=0;j<cols;j++){
+        const r=document.createElementNS(svgNS,'rect');
+        r.setAttribute('x',X0+j*scale); r.setAttribute('y',Y0);
+        r.setAttribute('width',scale); r.setAttribute('height',hFull);
+        r.setAttribute('fill',tint(COLORS[j%COLORS.length],.8));
+        svg.appendChild(r);
+      }
+    }else{
+      const r=document.createElementNS(svgNS,'rect');
+      r.setAttribute('x',X0); r.setAttribute('y',Y0);
+      r.setAttribute('width',wFull); r.setAttribute('height',hFull);
+      r.setAttribute('fill',tint('#06d6a0',.75)); svg.appendChild(r);
+    }
+
+    /* columna del resto (parcial, en rojo) */
+    if(rem>0){
+      const rx=X0+cols*scale;
+      const rh=(rem/state.d)*hFull;
+      const r=document.createElementNS(svgNS,'rect');
+      r.setAttribute('x',rx); r.setAttribute('y',Y0+hFull-rh);
+      r.setAttribute('width',scale); r.setAttribute('height',rh);
+      r.setAttribute('fill',tint('#ff6b6b',.8));
+      r.setAttribute('stroke','#ff6b6b'); r.setAttribute('stroke-width','1.5');
+      svg.appendChild(r);
+    }
+
+    /* cuadrícula honesta */
+    const grid=document.createElementNS(svgNS,'g');
+    grid.setAttribute('stroke','rgba(20,19,34,.6)'); grid.setAttribute('stroke-width','1');
+    for(let x=0;x<=cols;x+=stepX){
+      const l=document.createElementNS(svgNS,'line');
+      l.setAttribute('x1',X0+x*scale); l.setAttribute('x2',X0+x*scale);
+      l.setAttribute('y1',Y0); l.setAttribute('y2',Y0+hFull); grid.appendChild(l);
+    }
+    for(let y=0;y<=rows;y+=stepY){
+      const l=document.createElementNS(svgNS,'line');
+      l.setAttribute('x1',X0); l.setAttribute('x2',X0+wFull);
+      l.setAttribute('y1',Y0+y*scale); l.setAttribute('y2',Y0+y*scale); grid.appendChild(l);
+    }
+    svg.appendChild(grid);
+
+    /* borde del área exacta */
+    const border=document.createElementNS(svgNS,'rect');
+    border.setAttribute('x',X0+.5); border.setAttribute('y',Y0+.5);
+    border.setAttribute('width',wFull-1); border.setAttribute('height',hFull-1);
+    border.setAttribute('fill','none'); border.setAttribute('stroke','#fffffe'); border.setAttribute('stroke-width','1.5');
+    svg.appendChild(border);
+
+    /* corchete izquierdo: divisor (lado conocido) */
+    const bx=X0-10;
+    svg.appendChild(bracket(svgNS,`M ${bx+6} ${Y0} L ${bx} ${Y0} L ${bx} ${Y0+hFull} L ${bx+6} ${Y0+hFull}`,'#ffd166'));
+    svg.appendChild(svgText(svgNS,X0-18,Y0+hFull/2,state.d,'end','#ffd166'));
+
+    /* corchete inferior: cociente (lado que se busca) en verde */
+    const by=Y0+hFull+10;
+    svg.appendChild(bracket(svgNS,`M ${X0} ${by-6} L ${X0} ${by} L ${X0+wFull} ${by} L ${X0+wFull} ${by-6}`,'#06d6a0'));
+    svg.appendChild(svgText(svgNS,X0+wFull/2,by+22,'? → '+c.q,'middle','#06d6a0'));
+
+    stage.appendChild(svg);
+
+    const cap=document.createElement('p'); cap.className='caption';
+    let txt = `El área es <b>${state.D}</b> y un lado es <b>${state.d}</b>. El lado que buscás mide <b>${c.q}</b>.`;
+    if(stepX>1||stepY>1) txt += ` Cada casillero vale ${stepX*stepY}.`;
+    if(rem>0) txt += ` La tira roja son los <span class="sobra">${rem} que sobran</span>.`;
+    cap.innerHTML=txt;
+    stage.appendChild(cap);
+  }
+  function bracket(ns,d,color){
+    const p=document.createElementNS(ns,'path'); p.setAttribute('d',d);
+    p.setAttribute('fill','none'); p.setAttribute('stroke',color);
+    p.setAttribute('stroke-width','2'); p.setAttribute('stroke-linecap','round'); return p;
+  }
+  function svgText(ns,x,y,txt,anchor,color){
+    const t=document.createElementNS(ns,'text');
+    t.setAttribute('x',x); t.setAttribute('y',y); t.setAttribute('text-anchor',anchor);
+    t.setAttribute('dominant-baseline','middle'); t.setAttribute('fill',color);
+    t.setAttribute('font-family','Fredoka, sans-serif'); t.setAttribute('font-size','18');
+    t.setAttribute('font-weight','600'); t.textContent=txt; return t;
+  }
+
+  /* ══════════ ORQUESTA ══════════ */
+  function renderView(){
+    if(state.view==='repartir') renderRepartir();
+    else if(state.view==='tabla') renderTabla();
+    else renderArea();
+  }
+  function renderAll(count){
+    renderEq(); renderView();
+    if(count && compute()) registerResult();
+  }
+  function setView(v){
+    state.view=v;
+    $('btn-repartir').classList.toggle('active',v==='repartir');
+    $('btn-tabla').classList.toggle('active',v==='tabla');
+    $('btn-area').classList.toggle('active',v==='area');
+    renderAll(true);   /* ver el resultado en otra vista cuenta para esa vista */
+  }
+
+  /* entrada con retardo: cuenta cuando la división queda estable */
+  let debounce=null;
+  function onInput(){
+    const D=parseInt($('inD').value,10), d=parseInt($('ind').value,10);
+    state.D=(D>=1&&D<=999)?D:null;
+    state.d=(d>=1&&d<=99)?d:null;
+    renderEq(); renderView();               /* redibuja al toque, sin contar */
+    clearTimeout(debounce);
+    debounce=setTimeout(()=>{ if(compute()) registerResult(); }, 800);
+  }
+  $('inD').addEventListener('input',onInput);
+  $('ind').addEventListener('input',onInput);
+  window.addEventListener('resize',()=>{ if(state.view==='area') renderView(); });
+
+  renderDevCounts();
+  renderAll(false);
+</script>
+</body>
+</html>
